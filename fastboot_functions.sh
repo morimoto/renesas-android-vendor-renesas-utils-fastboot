@@ -1,0 +1,242 @@
+
+verify_cmd ()
+{
+    $@
+    result=$?
+    cmd=$@
+    if [ $result != 0 ]; then
+        echo "ERROR. Last command [$cmd] finished with result [$result]"
+        exit $result
+    else
+        echo "SUCCESS. Last command [$cmd] finished with result [$result]"
+    fi
+}
+
+adb_wait_device()
+{
+    ${ADB} wait-for-device
+
+    A=$(${ADB} shell getprop sys.boot_completed | tr -d '\r')
+    while [ "$A" != "1" ]; do
+        sleep 1
+        A=$(${ADB} shell getprop sys.boot_completed | tr -d '\r')
+    done
+}
+
+wait_for_fastboot ()
+{
+    time_wait=""
+
+    if [ "$1" = "" ]; then
+        time_wait=30;
+    else
+        if [[ $1 =~ ^[1-9][0-9]*$ ]] ; then
+            time_wait=$1;
+        else
+            time_wait=30;
+        fi
+    fi
+
+    printf "\nWaiting for device about $time_wait sec: "
+    for (( i=time_wait; i > 0; i-- ))
+    do
+        if [ -f ${FASTBOOT} ]; then
+
+            fastboot_status=$(${FASTBOOT_SERIAL} devices 2>/dev/null)
+            result=$?
+
+            if [ $result != 0 ]; then
+                echo "ERROR. fastboot status finished with result [$result]"
+                exit $result
+            fi
+
+            if [ "X$fastboot_status" = "X" ]; then
+                printf ".";
+            else
+                device=`echo $fastboot_status | awk '{print$1}'`
+                echo -e "\nFastboot - device detected: $device\n"
+                return 0;
+            fi
+        else
+            echo "Error: fastboot is not available at ${FASTBOOT}"
+            exit -1;
+        fi
+
+        sleep 1;
+    done
+
+    echo ""
+    echo "Warning: Please ensure that fastboot is running on the"\
+         "target device. Wait time is up"
+    return 1;
+}
+
+soft_verify_file ()
+{
+    if [ ! -f "$*" ]; then
+        echo "ERROR. File [$*] not found"
+        return 1
+    else
+        echo "SUCCESS. File [$*] found"
+        return 1
+    fi
+}
+
+verify_file ()
+{
+    if [ ! -f "$*" ]; then
+        echo "ERROR. File [$*] not found"
+        exit 1
+    else
+        echo "SUCCESS. File [$*] found"
+    fi
+}
+
+flash_bootloader_fastboot ()
+{
+    if [[ $BOOTLOADER = false ]] ; then
+        echo "**************** --nobl argument is set"
+        echo "**************** skipping flash bootloader section"
+        return
+    fi
+
+    if [ ! -e "${bootloaderimg}" ] ; then
+        echo "bootloader.img not found"
+        echo "Try to build bootloader.img"
+        echo "Checking required files exist..."
+        verify_bins
+        if [[ $? != 0 ]]; then
+            echo
+            echo "**************** NO bootloader binaries found."
+            echo "**************** It's ok, skipping flash bootloader section"
+            echo
+            return
+        else
+            echo "Run packipl"
+            verify_cmd $packipl all ./
+        fi
+    fi
+
+    echo "Flash bootloader"
+    verify_cmd ${FASTBOOT_SERIAL} flash bootloader ${bootloaderimg}
+
+    if [[ $LEGACY_BL = true ]] ; then
+        echo "**************** --legacy_bl argument is set"
+        echo "**************** Flashing bootloaders to HyperFlash"
+        verify_cmd ${FASTBOOT_SERIAL} oem flash all
+        echo "Waiting 30 sec for bootloaders update ..."
+        sleep 5; wait_for_fastboot 30
+    else
+        verify_cmd ${FASTBOOT_SERIAL} reboot-bootloader
+        sleep 3; wait_for_fastboot 30
+    fi
+
+    if [[ $RESETENV = false ]] ; then
+        echo "**************** --noresetenv argument is set"
+        echo "**************** Skipping operation of reset default environment"
+    else
+        verify_cmd ${FASTBOOT_SERIAL} oem setenv default
+    fi
+
+    verify_cmd ${FASTBOOT_SERIAL} oem format
+    verify_cmd ${FASTBOOT_SERIAL} reboot-bootloader
+}
+
+flash_bootloader_adb ()
+{
+    echo "Flash bootloader"
+
+    verify_cmd ${ADB} root
+    adb_wait_device
+    verify_cmd ${ADB} push ${bootloaderimg} ${DATA}
+    verify_cmd ${ADB} shell ${UNPACK_IPL} ${DATA}/${bootloaderimg} ${DATA}
+
+    verify_cmd ${ADB} shell ${HYPER_CA} -w PARAM ${DATA}/${bootparam}
+    verify_cmd ${ADB} shell ${HYPER_CA} -w CERT ${DATA}/${cert}
+    verify_cmd ${ADB} shell ${HYPER_CA} -w BL2 ${DATA}/${bl2}
+    verify_cmd ${ADB} shell ${HYPER_CA} -w BL31 ${DATA}/${bl31}
+    verify_cmd ${ADB} shell ${HYPER_CA} -w OPTEE ${DATA}/${tee}
+    verify_cmd ${ADB} shell ${HYPER_CA} -w UBOOT ${DATA}/${uboot}
+    verify_cmd ${ADB} shell ${HYPER_CA} -e SSDATA
+    echo "SUCCESS"
+}
+
+flash_bootloader_only_bl2 ()
+{
+    verify_cmd ${ADB} root
+    adb_wait_device
+    verify_cmd ${ADB} push ${bootloader_hf} ${DATA}
+    verify_cmd ${ADB} shell ${UNPACK_IPL} ${DATA}/"bootloader_hf.img" ${DATA}
+    echo "Flashing bl2.."
+    verify_cmd ${ADB} shell ${HYPER_CA} -w BL2 ${DATA}/${bl2}
+}
+
+verify_bins ()
+{
+    if [ ! -f "$bootparam" ]; then
+        return 1
+    fi
+    if [ ! -f "$bl2" ]; then
+        return 1
+    fi
+    if [ ! -f "$cert" ]; then
+        return 1
+    fi
+    if [ ! -f "$bl31" ]; then
+        return 1
+    fi
+    if [ ! -f "$tee" ]; then
+        return 1
+    fi
+    if [ ! -f "$uboot" ]; then
+        return 1
+    fi
+    if [ ! -f "$pack_ipl" ]; then
+        return 1
+    fi
+}
+
+check_adb ()
+{
+	if [ -f ${ADB} ]; then
+	adb_status=`${ADB} devices | sed -n 2p 2>&1`
+	if [ "X$adb_status" = "X" ]; then
+		echo "No device detected. Please ensure that" \
+			 "target device is connected and booted"
+		exit -1;
+	else
+		device=`echo $adb_status  |awk '{print$1}'`
+		echo -e "\nadb - device detected: $device\n"
+	fi
+	else
+	echo "Error: adb is not available at ${ADB}"
+	exit -1;
+	fi
+}
+
+check_fastboot()
+{
+	if [ -f ${FASTBOOT} ]; then
+
+		fastboot_status=$(${FASTBOOT_SERIAL} devices 2>/dev/null)
+		result=$?
+		if [ $result != 0 ]; then
+			echo "ERROR. fastboot status finished with result [$result]"
+			exit $result
+		fi
+
+		if [ "X$fastboot_status" = "X" ]; then
+			echo "No device detected. Please ensure that" \
+					 "fastboot is running on the target device"
+			exit -1;
+		else
+			device=`echo $fastboot_status | awk '{print$1}'`
+			echo -e "\nFastboot - device detected: $device\n"
+		fi
+	else
+		echo "Error: fastboot is not available at ${FASTBOOT}"
+		exit -1;
+	fi
+}
+
+
