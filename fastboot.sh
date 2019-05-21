@@ -8,7 +8,6 @@ LEGACY_BL=false
 RESETENV=true
 OEMERASE=true
 SLOT=a
-ERASE_USERDATA=false
 
 usage ()
 {
@@ -21,7 +20,6 @@ usage ()
     echo "  --noresetenv Don't reset u-boot environments"
     echo "  --boot_first Flash boot dtb and vbmeta before IPL update"
     echo "  --legacy_bl Use legacy mechanism for flashing bootloaders to HyperFlash via recovery"
-    echo "  --erase_ud Erase userdata before formatting"
 
     exit 1;
 }
@@ -59,10 +57,6 @@ case $i in
     ;;
     --legacy_bl)
     LEGACY_BL=true
-    shift
-    ;;
-    --erase_ud)
-    ERASE_USERDATA=true
     shift
     ;;
 
@@ -147,7 +141,6 @@ vbmetaimg="${PRODUCT_OUT}/vbmeta.img"
 systemimg="${PRODUCT_OUT}/system.img"
 vendorimg="${PRODUCT_OUT}/vendor.img"
 productimg="${PRODUCT_OUT}/product.img"
-userdataimg="${PRODUCT_OUT}/userdata.img"
 bootloaderimg="${PRODUCT_OUT}/bootloader.img"
 bootparam="${PRODUCT_OUT}/bootparam_sa0.bin"
 bl2="${PRODUCT_OUT}/bl2.bin"
@@ -182,7 +175,6 @@ verify_file ${vbmetaimg}
 verify_file ${systemimg}
 verify_file ${vendorimg}
 verify_file ${productimg}
-verify_file ${userdataimg}
 
 # =============================================================================
 # end pre-run
@@ -225,15 +217,7 @@ fi
 verify_cmd ${FASTBOOT_SERIAL} flash system ${systemimg}
 verify_cmd ${FASTBOOT_SERIAL} flash vendor ${vendorimg}
 verify_cmd ${FASTBOOT_SERIAL} flash product ${productimg}
-
-if [[ $ERASE_USERDATA = true ]] ; then
-    echo "**************** --erase_ud argument is set"
-    echo "**************** Erasing partition before flashing process"
-    verify_cmd ${FASTBOOT_SERIAL} flash userdata ${userdataimg}
-else
-    verify_cmd ${FASTBOOT_SERIAL} flash -u userdata ${userdataimg}
-fi
-
+verify_cmd ${FASTBOOT_SERIAL} format userdata
 verify_cmd ${FASTBOOT_SERIAL} erase metadata
 
 # Reboot now
