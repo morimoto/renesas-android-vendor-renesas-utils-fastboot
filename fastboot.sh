@@ -140,6 +140,7 @@ vbmetaimg="${PRODUCT_OUT}/vbmeta.img"
 systemimg="${PRODUCT_OUT}/system.img"
 vendorimg="${PRODUCT_OUT}/vendor.img"
 productimg="${PRODUCT_OUT}/product.img"
+odmimg="${PRODUCT_OUT}/odm.img"
 bootloaderimg="${PRODUCT_OUT}/bootloader.img"
 bootparam="${PRODUCT_OUT}/bootparam_sa0.bin"
 bl2="${PRODUCT_OUT}/bl2.bin"
@@ -173,6 +174,7 @@ verify_file ${vbmetaimg}
 verify_file ${systemimg}
 verify_file ${vendorimg}
 verify_file ${productimg}
+verify_file ${odmimg}
 
 # =============================================================================
 # end pre-run
@@ -212,6 +214,7 @@ fi
 verify_cmd ${FASTBOOT_SERIAL} flash system ${systemimg}
 verify_cmd ${FASTBOOT_SERIAL} flash vendor ${vendorimg}
 verify_cmd ${FASTBOOT_SERIAL} flash product ${productimg}
+verify_cmd ${FASTBOOT_SERIAL} flash odm ${odmimg}
 verify_cmd ${FASTBOOT_SERIAL} format userdata
 verify_cmd ${FASTBOOT_SERIAL} erase metadata
 
