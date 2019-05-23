@@ -134,7 +134,6 @@ platform=`${FASTBOOT_SERIAL} getvar platform 2>&1 | grep platform | awk '{print$
 revision=`${FASTBOOT_SERIAL} getvar revision 2>&1 | grep revision | awk '{print$2}'`
 
 # Create the filename
-dtbimg="${PRODUCT_OUT}/dtb.img"
 dtboimg="${PRODUCT_OUT}/dtbo.img"
 bootimg="${PRODUCT_OUT}/boot.img"
 vbmetaimg="${PRODUCT_OUT}/vbmeta.img"
@@ -168,7 +167,6 @@ if [ -f "${platformtxt}" ]; then
     fi
 fi
 
-verify_file ${dtbimg}
 verify_file ${dtboimg}
 verify_file ${bootimg}
 verify_file ${vbmetaimg}
@@ -185,7 +183,6 @@ verify_cmd ${FASTBOOT_SERIAL} --set-active=${SLOT}
 
 # Before BL flash, must be reflashed boot.img, DTB and vbmeta
 if [[ $BOOT_FIRST = true ]] ; then
-    verify_cmd ${FASTBOOT_SERIAL} flash dtb ${dtbimg}
     verify_cmd ${FASTBOOT_SERIAL} flash boot ${bootimg}
     verify_cmd ${FASTBOOT_SERIAL} flash vbmeta ${vbmetaimg}
 else
@@ -199,8 +196,6 @@ flash_bootloader_fastboot
 echo "Flash Android partitions"
 
 verify_cmd ${FASTBOOT_SERIAL} --set-active=${SLOT}
-
-verify_cmd ${FASTBOOT_SERIAL} flash dtb ${dtbimg}
 verify_cmd ${FASTBOOT_SERIAL} flash dtbo ${dtboimg}
 verify_cmd ${FASTBOOT_SERIAL} flash boot ${bootimg}
 verify_cmd ${FASTBOOT_SERIAL} flash vbmeta ${vbmetaimg}
