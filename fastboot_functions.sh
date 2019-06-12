@@ -58,7 +58,7 @@ wait_for_fastboot ()
                 return 0;
             fi
         else
-            echo "Error: fastboot is not available at ${FASTBOOT}"
+            echo "Error: fastboot executable is not available at ${PRODUCT_OUT}"
             exit -1;
         fi
 
@@ -74,11 +74,11 @@ wait_for_fastboot ()
 soft_verify_file ()
 {
     if [ ! -f "$*" ]; then
-        echo "ERROR. File [$*] not found"
+        echo "WARNING. File [$*] not found"
         return 1
     else
         echo "SUCCESS. File [$*] found"
-        return 1
+        return 0
     fi
 }
 
@@ -234,7 +234,7 @@ check_fastboot()
 			echo -e "\nFastboot - device detected: $device\n"
 		fi
 	else
-		echo "Error: fastboot is not available at ${FASTBOOT}"
+		echo "Error: fastboot executable is not available at ${PRODUCT_OUT}"
 		exit -1;
 	fi
 }

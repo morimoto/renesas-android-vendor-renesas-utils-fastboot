@@ -8,6 +8,7 @@ LEGACY_BL=false
 RESETENV=true
 OEMERASE=true
 SLOT=a
+PWD=`pwd`
 
 usage ()
 {
@@ -75,15 +76,15 @@ if [ -z "$SLOT" ] ; then
     exit -1;
 fi
 
-if [ -n "$ANDROID_BUILD_TOP" ] ; then
-    echo "ANDROID_BUILD_TOP is set. Using images from output dir"
+if [ -n "$ANDROID_PRODUCT_OUT" ] ; then
+    echo "ANDROID_PRODUCT_OUT is set. Using images from output dir: ${ANDROID_PRODUCT_OUT}"
     export FASTBOOT=${FASTBOOT-"${ANDROID_HOST_OUT}/bin/fastboot"}
     export PRODUCT_OUT=${PRODUCT_OUT-"${ANDROID_PRODUCT_OUT}"}
 else
-    echo "ANDROID_BUILD_TOP is not set. Using images from current dir `pwd`"
+    echo "ANDROID_PRODUCT_OUT is not set. Using images from current dir ${PWD}"
     # Pre-packaged DB
-    export PRODUCT_OUT="."
-    export  FASTBOOT="$PRODUCT_OUT/fastboot"
+    export PRODUCT_OUT=${PWD}
+    export FASTBOOT="$PRODUCT_OUT/fastboot"
 fi
 
 # =============================================================================
@@ -124,7 +125,7 @@ if [ -f ${FASTBOOT} ]; then
         echo -e "\nFastboot - device detected: $device\n"
     fi
 else
-    echo "Error: fastboot is not available at ${FASTBOOT}"
+    echo "Error: fastboot executable is not available at ${PRODUCT_OUT}"
     exit -1;
 fi
 
@@ -137,10 +138,7 @@ revision=`${FASTBOOT_SERIAL} getvar revision 2>&1 | grep revision | awk '{print$
 dtboimg="${PRODUCT_OUT}/dtbo.img"
 bootimg="${PRODUCT_OUT}/boot.img"
 vbmetaimg="${PRODUCT_OUT}/vbmeta.img"
-systemimg="${PRODUCT_OUT}/system.img"
-vendorimg="${PRODUCT_OUT}/vendor.img"
-productimg="${PRODUCT_OUT}/product.img"
-odmimg="${PRODUCT_OUT}/odm.img"
+superimg="${PRODUCT_OUT}/super.img"
 bootloaderimg="${PRODUCT_OUT}/bootloader.img"
 bootparam="${PRODUCT_OUT}/bootparam_sa0.bin"
 bl2="${PRODUCT_OUT}/bl2.bin"
@@ -171,10 +169,7 @@ fi
 verify_file ${dtboimg}
 verify_file ${bootimg}
 verify_file ${vbmetaimg}
-verify_file ${systemimg}
-verify_file ${vendorimg}
-verify_file ${productimg}
-verify_file ${odmimg}
+verify_file ${superimg}
 
 # =============================================================================
 # end pre-run
@@ -211,10 +206,16 @@ else
     sleep 3; wait_for_fastboot 30
 fi
 
-verify_cmd ${FASTBOOT_SERIAL} flash system ${systemimg}
-verify_cmd ${FASTBOOT_SERIAL} flash vendor ${vendorimg}
-verify_cmd ${FASTBOOT_SERIAL} flash product ${productimg}
-verify_cmd ${FASTBOOT_SERIAL} flash odm ${odmimg}
+verify_cmd ${FASTBOOT_SERIAL} reboot fastboot
+echo "Waiting 30 sec for fastbootd ..."
+sleep 3; wait_for_fastboot 30
+
+verify_cmd ${FASTBOOT_SERIAL} flash super ${superimg}
+
+verify_cmd ${FASTBOOT_SERIAL} reboot bootloader
+echo "Waiting 30 sec for fastboot ..."
+sleep 3; wait_for_fastboot 30
+
 verify_cmd ${FASTBOOT_SERIAL} format userdata
 verify_cmd ${FASTBOOT_SERIAL} erase metadata
 
