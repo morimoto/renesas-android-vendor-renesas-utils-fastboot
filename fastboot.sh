@@ -197,6 +197,10 @@ verify_cmd ${FASTBOOT_SERIAL} flash dtbo ${dtboimg}
 verify_cmd ${FASTBOOT_SERIAL} flash boot ${bootimg}
 verify_cmd ${FASTBOOT_SERIAL} flash vbmeta ${vbmetaimg}
 
+verify_cmd ${FASTBOOT_SERIAL} reboot fastboot
+echo "Waiting 30 sec for fastbootd ..."
+sleep 3; wait_for_fastboot 30
+
 if [[ $OEMERASE = false ]] ; then
     echo "**************** --noerase argument is set"
     echo "**************** Skipping operation of erasing secure storage"
@@ -205,10 +209,6 @@ else
     echo "Waiting 30 sec for erasing secure storage ..."
     sleep 3; wait_for_fastboot 30
 fi
-
-verify_cmd ${FASTBOOT_SERIAL} reboot fastboot
-echo "Waiting 30 sec for fastbootd ..."
-sleep 3; wait_for_fastboot 30
 
 verify_cmd ${FASTBOOT_SERIAL} flash super ${superimg}
 
