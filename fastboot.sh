@@ -5,6 +5,7 @@
 BOOT_FIRST=false
 BOOTLOADER=true
 LEGACY_BL=false
+BOOTSTRAP=true
 RESETENV=true
 OEMERASE=true
 SLOT=a
@@ -21,6 +22,7 @@ usage ()
     echo "  --noresetenv Don't reset u-boot environments"
     echo "  --boot_first Flash boot dtb and vbmeta before IPL update"
     echo "  --legacy_bl Use legacy mechanism for flashing bootloaders to HyperFlash via recovery"
+    echo "  --nobootstrap Don't use bootstrapping (flashing 'super.img'), as it will flash _a slot"
 
     exit 1;
 }
@@ -60,7 +62,10 @@ case $i in
     LEGACY_BL=true
     shift
     ;;
-
+    --nobootstrap)
+    BOOTSTRAP=false
+    shift
+    ;;
 
     *)
     echo "Unknown option: ${i}"
@@ -139,6 +144,10 @@ dtboimg="${PRODUCT_OUT}/dtbo.img"
 bootimg="${PRODUCT_OUT}/boot.img"
 vbmetaimg="${PRODUCT_OUT}/vbmeta.img"
 superimg="${PRODUCT_OUT}/super.img"
+systemimg="${PRODUCT_OUT}/system.img"
+vendorimg="${PRODUCT_OUT}/vendor.img"
+productimg="${PRODUCT_OUT}/product.img"
+odmimg="${PRODUCT_OUT}/odm.img"
 bootloaderimg="${PRODUCT_OUT}/bootloader.img"
 bootparam="${PRODUCT_OUT}/bootparam_sa0.bin"
 bl2="${PRODUCT_OUT}/bl2.bin"
@@ -210,7 +219,27 @@ else
     sleep 3; wait_for_fastboot 30
 fi
 
-verify_cmd ${FASTBOOT_SERIAL} flash super ${superimg}
+# For A/B devices, super partition always contains sub-partitions in
+# the _a slot, because this image should only be used for
+# bootstrapping / initializing the device. When flashing the image,
+# bootloader fastboot should always mark _a slot as bootable.
+
+if [[ $BOOTSTRAP = true ]] || [[ $SLOT == "a" ]] ; then
+    verify_cmd ${FASTBOOT_SERIAL} flash super ${superimg}
+fi
+
+# Only for slot _b we need to flash rest dynamic partitions manually
+if [[ $SLOT == "b" ]] ; then
+    verify_file ${systemimg}
+    verify_file ${vendorimg}
+    verify_file ${productimg}
+    verify_file ${odmimg}
+
+    verify_cmd ${FASTBOOT_SERIAL} flash system ${systemimg}
+    verify_cmd ${FASTBOOT_SERIAL} flash vendor ${vendorimg}
+    verify_cmd ${FASTBOOT_SERIAL} flash product ${productimg}
+    verify_cmd ${FASTBOOT_SERIAL} flash odm ${odmimg}
+fi
 
 verify_cmd ${FASTBOOT_SERIAL} reboot bootloader
 echo "Waiting 30 sec for fastboot ..."
