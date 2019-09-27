@@ -14,7 +14,12 @@ verify_cmd ()
 
 adb_wait_device()
 {
-    ${ADB} wait-for-device
+    if [ ! -f ${ADB} ]; then
+        echo "Error: adb is not available at ${ADB}" >&2
+        exit -1;
+    fi
+
+    verify_cmd ${ADB} wait-for-device
 
     A=$(${ADB} shell getprop sys.boot_completed | tr -d '\r')
     while [ "$A" != "1" ]; do
@@ -142,33 +147,13 @@ flash_bootloader_fastboot ()
     verify_cmd ${FASTBOOT_SERIAL} reboot-bootloader
 }
 
-flash_bootloader_adb ()
-{
-    echo "Flash bootloader"
-
-    verify_cmd ${ADB} root
-    adb_wait_device
-    verify_cmd ${ADB} push ${bootloaderimg} ${DATA}
-    verify_cmd ${ADB} shell ${UNPACK_IPL} ${DATA}/${bootloaderimg} ${DATA}
-
-    verify_cmd ${ADB} shell ${HYPER_CA} -w PARAM ${DATA}/${bootparam}
-    verify_cmd ${ADB} shell ${HYPER_CA} -w CERT ${DATA}/${cert}
-    verify_cmd ${ADB} shell ${HYPER_CA} -w BL2 ${DATA}/${bl2}
-    verify_cmd ${ADB} shell ${HYPER_CA} -w BL31 ${DATA}/${bl31}
-    verify_cmd ${ADB} shell ${HYPER_CA} -w OPTEE ${DATA}/${tee}
-    verify_cmd ${ADB} shell ${HYPER_CA} -w UBOOT ${DATA}/${uboot}
-    verify_cmd ${ADB} shell ${HYPER_CA} -e SSDATA
-    echo "SUCCESS"
-}
-
 flash_bootloader_only_bl2 ()
 {
     verify_cmd ${ADB} root
     adb_wait_device
-    verify_cmd ${ADB} push ${bootloader_hf} ${DATA}
-    verify_cmd ${ADB} shell ${UNPACK_IPL} ${DATA}/"bootloader_hf.img" ${DATA}
+    verify_cmd ${ADB} push ${bl2} ${DATA}
     echo "Flashing bl2.."
-    verify_cmd ${ADB} shell ${HYPER_CA} -w BL2 ${DATA}/${bl2}
+    verify_cmd ${ADB} shell ${HYPER_CA} -w BL2 ${DATA}/${bl2##*/}
 }
 
 verify_bins ()
@@ -238,5 +223,4 @@ check_fastboot()
 		exit -1;
 	fi
 }
-
 
