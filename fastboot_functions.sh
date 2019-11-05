@@ -1,4 +1,3 @@
-
 verify_cmd ()
 {
     $@
@@ -9,6 +8,57 @@ verify_cmd ()
         exit $result
     else
         echo "SUCCESS. Last command [$cmd] finished with result [$result]"
+    fi
+}
+
+fastboot_check()
+{
+    if [ -f ${FASTBOOT} ]; then
+        fastboot_status=`${FASTBOOT_SERIAL} devices 2>&1`
+        if [ `echo $fastboot_status | grep -wc "no permissions"` -gt 0 ]; then
+        cat <<-EOF >&2
+        -------------------------------------------
+        Fastboot requires administrator permissions
+        Please run the script as root or create a
+        fastboot udev rule, e.g:
+         % cat /etc/udev/rules.d/99_android.rules
+            SUBSYSTEM=="usb",
+            SYSFS{idVendor}=="0451"
+            OWNER="<username>"
+            GROUP="adm"
+        -------------------------------------------
+EOF
+        return -1
+        elif [ "X$fastboot_status" = "X" ]; then
+            echo "No device detected. Please ensure that" \
+                 "fastboot is running on the target device"
+            return 1;
+        else
+            device=`echo $fastboot_status | awk '{print$1}'`
+            echo -e "\nFastboot - device detected: $device\n"
+            return 0
+        fi
+    else
+        echo "Error: fastboot executable is not available at ${PRODUCT_OUT}"
+        return -1;
+    fi
+}
+
+adb_reboot()
+{
+    if [ ! -f ${ADB} ]; then
+        echo "Error: adb is not available at ${ADB}" >&2
+        exit -1;
+    fi
+
+    A=$(${ADB_SERIAL} devices | grep -P "\d+\W+device" || :)
+    if [ "$A" = "" ]; then
+        echo "No adb devices found"
+        return -1
+    else
+        echo "Rebooting via ADB..."
+        ${ADB_SERIAL} reboot bootloader
+        return 0
     fi
 }
 

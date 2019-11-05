@@ -148,37 +148,20 @@ fi
 
 if [ -n "${SERIAL}" ] ; then
     export FASTBOOT_SERIAL="${FASTBOOT} ${SERIAL}"
+    export ADB_SERIAL="${ADB} ${SERIAL}"
 else
     export FASTBOOT_SERIAL="${FASTBOOT}"
+    export ADB_SERIAL="${ADB}"
 fi
 
-if [ -f ${FASTBOOT} ]; then
-    fastboot_status=`${FASTBOOT_SERIAL} devices 2>&1`
-    if [ `echo $fastboot_status | grep -wc "no permissions"` -gt 0 ]; then
-        cat <<-EOF >&2
-        -------------------------------------------
-        Fastboot requires administrator permissions
-        Please run the script as root or create a
-        fastboot udev rule, e.g:
-         % cat /etc/udev/rules.d/99_android.rules
-            SUBSYSTEM=="usb",
-            SYSFS{idVendor}=="0451"
-            OWNER="<username>"
-            GROUP="adm"
-        -------------------------------------------
-	EOF
-        exit 1
-    elif [ "X$fastboot_status" = "X" ]; then
-        echo "No device detected. Please ensure that" \
-             "fastboot is running on the target device"
-        exit -1;
-    else
-        device=`echo $fastboot_status | awk '{print$1}'`
-        echo -e "\nFastboot - device detected: $device\n"
-    fi
-else
-    echo "Error: fastboot executable is not available at ${PRODUCT_OUT}"
-    exit -1;
+fastboot_check || result=$?
+if [[ "$result" == 1 ]]; then
+    echo "Trying to reboot using adb"
+    adb_reboot
+    sleep 5
+    fastboot_check
+elif [[ ! -z "$result" && "$result" != 0  ]]; then
+    exit -1
 fi
 
 # poll the board to find out its configuration
