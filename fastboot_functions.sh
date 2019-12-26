@@ -199,11 +199,8 @@ flash_bootloader_fastboot ()
 
 flash_bootloader_only_bl2 ()
 {
-    verify_cmd ${ADB} root
-    adb_wait_device
-    verify_cmd ${ADB} push ${bl2} ${DATA}
     echo "Flashing bl2.."
-    verify_cmd ${ADB} shell ${HYPER_CA} -w BL2 ${DATA}/${bl2##*/}
+    ${FASTBOOT_SERIAL} flash bl2.bin ${bl2}
 }
 
 verify_bins ()

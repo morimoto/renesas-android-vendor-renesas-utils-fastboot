@@ -132,13 +132,6 @@ fi
 
 . $(dirname $(readlink -f $0))/fastboot_functions.sh
 
-if [[ ${FLASH_BL2_EXIT} = true ]]; then
-    verify_file ${bl2}
-    adb_wait_device
-    flash_bootloader_only_bl2
-    exit 0;
-fi
-
 # =============================================================================
 # pre-run
 # =============================================================================
@@ -194,6 +187,13 @@ verify_file ${superimg}
 # =============================================================================
 # end pre-run
 # =============================================================================
+
+if [[ ${FLASH_BL2_EXIT} = true ]]; then
+    verify_file ${bl2}
+    flash_bootloader_only_bl2
+    ${FASTBOOT_SERIAL} reboot
+    exit 0;
+fi
 
 # Select slot before flashing
 verify_cmd ${FASTBOOT_SERIAL} --set-active=${SLOT}
@@ -273,15 +273,14 @@ sleep 3; wait_for_fastboot 30
 verify_cmd ${FASTBOOT_SERIAL} format userdata
 verify_cmd ${FASTBOOT_SERIAL} erase metadata
 
-# Reboot now
-verify_cmd ${FASTBOOT_SERIAL} reboot
-
 # Update BL2 on HyperFlash
 if [[ ${HYPER_BL2} = true ]]; then
-    adb_wait_device
+    verify_file ${bl2}
     flash_bootloader_only_bl2
 fi
 
+# Reboot now
+verify_cmd ${FASTBOOT_SERIAL} reboot
 echo "SUCCESS. Script finished successfully"
 exit 0
 
