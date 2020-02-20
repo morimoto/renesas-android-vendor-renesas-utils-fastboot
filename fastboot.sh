@@ -2,7 +2,7 @@
 
 BOOT_FIRST=false
 BOOTLOADER=true
-HYPER_BL2=false
+HYPER_BL2=true
 LEGACY_BL=false
 BOOTSTRAP=true
 RESETENV=true
@@ -61,7 +61,7 @@ usage ()
     echo "  --noresetenv Don't reset u-boot environments"
     echo "  --boot_first Flash boot dtb and vbmeta before IPL update"
     echo "  --legacy_bl Use legacy mechanism for flashing bootloaders to HyperFlash via recovery"
-    echo "  --flash_bl2 (Right before that script finished its work) BL2 will be uploaded/flashed"
+    echo "  --noflash_bl2 Don't update bl2 in HyperFlash (by default it will be flashed)"
     echo "  --fbl2_exit Flash/Update BL2 only and exit"
     echo "  --nobootstrap Don't use bootstrapping (flashing 'super.img'), as it will flash _a slot"
 
@@ -83,8 +83,8 @@ case $i in
     BOOTLOADER=false
     shift
     ;;
-    --flash_bl2)
-    HYPER_BL2=true
+    --noflash_bl2)
+    HYPER_BL2=false
     shift
     ;;
     -h|--help)
