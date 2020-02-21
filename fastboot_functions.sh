@@ -51,7 +51,7 @@ adb_reboot()
         exit -1;
     fi
 
-    A=$(${ADB_SERIAL} devices | grep -P "\d+\W+device" || :)
+    A=$(${ADB_SERIAL} devices | grep -P ".+\W+device$" || :)
     if [ "$A" = "" ]; then
         echo "No adb devices found"
         return -1
