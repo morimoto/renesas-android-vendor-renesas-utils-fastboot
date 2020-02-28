@@ -279,6 +279,9 @@ if [[ ${HYPER_BL2} = true ]]; then
     flash_bootloader_only_bl2
 fi
 
+# Update current timestamp for RTC in ENV
+verify_cmd ${FASTBOOT_SERIAL} oem setenv rtc_time `date +"%s"`
+
 # Reboot now
 verify_cmd ${FASTBOOT_SERIAL} reboot
 echo "SUCCESS. Script finished successfully"
