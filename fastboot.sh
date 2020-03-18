@@ -81,6 +81,7 @@ case $i in
     ;;
     --nobl)
     BOOTLOADER=false
+    HYPER_BL2=false
     shift
     ;;
     --noflash_bl2)
