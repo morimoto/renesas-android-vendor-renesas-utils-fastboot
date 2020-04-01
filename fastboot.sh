@@ -50,6 +50,7 @@ tee="${PRODUCT_OUT}/tee.bin"
 uboot="${PRODUCT_OUT}/u-boot.bin"
 packipl="${PRODUCT_OUT}/pack_ipl"
 platformtxt="${PRODUCT_OUT}/platform.txt"
+logo="${PRODUCT_OUT}/logo.argb"
 
 usage ()
 {
@@ -261,6 +262,11 @@ fi
 
 # Update current timestamp for RTC in ENV
 verify_cmd ${FASTBOOT_SERIAL} oem setenv rtc_time `date +"%s"`
+
+# Flash logo partition, if present
+if [ -f ${logo} ]; then
+    verify_cmd ${FASTBOOT_SERIAL} flash logo ${logo}
+fi
 
 # Reboot now
 verify_cmd ${FASTBOOT_SERIAL} reboot
