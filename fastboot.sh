@@ -272,7 +272,7 @@ echo "Waiting 30 sec for fastboot ..."
 sleep 3; wait_for_fastboot 30
 
 verify_cmd ${FASTBOOT_SERIAL} format userdata
-verify_cmd ${FASTBOOT_SERIAL} erase metadata
+verify_cmd ${FASTBOOT_SERIAL} format metadata
 
 # Update BL2 on HyperFlash
 if [[ ${HYPER_BL2} = true ]]; then
