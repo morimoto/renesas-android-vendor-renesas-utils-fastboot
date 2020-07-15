@@ -33,6 +33,7 @@ fi
 # Create the filename
 dtboimg="${PRODUCT_OUT}/dtbo.img"
 bootimg="${PRODUCT_OUT}/boot.img"
+vendorbootimg="${PRODUCT_OUT}/vendor_boot.img"
 vbmetaimg="${PRODUCT_OUT}/vbmeta.img"
 superimg="${PRODUCT_OUT}/super.img"
 systemimg="${PRODUCT_OUT}/system.img"
@@ -182,6 +183,7 @@ fi
 
 verify_file ${dtboimg}
 verify_file ${bootimg}
+verify_file ${vendorbootimg}
 verify_file ${vbmetaimg}
 verify_file ${superimg}
 
@@ -202,6 +204,7 @@ verify_cmd ${FASTBOOT_SERIAL} --set-active=${SLOT}
 # Before BL flash, must be reflashed boot.img, DTB and vbmeta
 if [[ $BOOT_FIRST = true ]] ; then
     verify_cmd ${FASTBOOT_SERIAL} flash boot ${bootimg}
+    verify_cmd ${FASTBOOT_SERIAL} flash vendor_boot ${vendorbootimg}
     verify_cmd ${FASTBOOT_SERIAL} flash vbmeta ${vbmetaimg}
 else
     echo "--boot_first is not specified - skipping boot and adb flashing.."
@@ -216,6 +219,7 @@ echo "Flash Android partitions"
 verify_cmd ${FASTBOOT_SERIAL} --set-active=${SLOT}
 verify_cmd ${FASTBOOT_SERIAL} flash dtbo ${dtboimg}
 verify_cmd ${FASTBOOT_SERIAL} flash boot ${bootimg}
+verify_cmd ${FASTBOOT_SERIAL} flash vendor_boot ${vendorbootimg}
 verify_cmd ${FASTBOOT_SERIAL} flash vbmeta ${vbmetaimg}
 
 verify_cmd ${FASTBOOT_SERIAL} reboot fastboot
