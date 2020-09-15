@@ -53,10 +53,9 @@ platformtxt="${PRODUCT_OUT}/platform.txt"
 
 usage ()
 {
-    echo "Usage: %fastboot.sh [--nobl --slot=<a or b>]"
+    echo "Usage: %fastboot.sh [--nobl]"
     echo "options:"
     echo "  --nobl Don't flash bootloader"
-    echo "  --slot=<a or b> Select specified slot for flashing"
     echo "  --serial=0000 Flashing device serial number"
     echo "  --noerase Don't erase Secure Storage"
     echo "  --noresetenv Don't reset u-boot environments"
@@ -74,10 +73,6 @@ do
 case $i in
     --serial=*)
     SERIAL="-s ${i#*=}"
-    shift
-    ;;
-    --slot=*)
-    SLOT="${i#*=}"
     shift
     ;;
     --nobl)
@@ -124,13 +119,6 @@ case $i in
     ;;
 esac
 done
-
-if [ -z "$SLOT" ] ; then
-    echo
-    echo "ERROR: slot is not set"
-    echo
-    exit -1;
-fi
 
 . $(dirname $(readlink -f $0))/fastboot_functions.sh
 
@@ -256,19 +244,6 @@ else
 	echo "Error: mke2fs is not available at ${MAKEFS}"
 	exit -1;
     fi
-fi
-
-# Only for slot _b we need to flash rest dynamic partitions manually
-if [[ $SLOT == "b" ]] ; then
-    verify_file ${systemimg}
-    verify_file ${vendorimg}
-    verify_file ${productimg}
-    verify_file ${odmimg}
-
-    verify_cmd ${FASTBOOT_SERIAL} flash system ${systemimg}
-    verify_cmd ${FASTBOOT_SERIAL} flash vendor ${vendorimg}
-    verify_cmd ${FASTBOOT_SERIAL} flash product ${productimg}
-    verify_cmd ${FASTBOOT_SERIAL} flash odm ${odmimg}
 fi
 
 verify_cmd ${FASTBOOT_SERIAL} reboot bootloader
